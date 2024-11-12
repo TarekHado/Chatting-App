@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        .message {
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Real-Time Chat</h2>
+
+    <!-- Sender Input (set its value from the server-side) -->
+    <input type="text" id="sender" placeholder="Your Name" value="<%= newMessage.sender %>" readonly hidden />
+
+    <!-- Receiver Input (set its value from the server-side) -->
+    <input type="text" id="receiver" placeholder="Receiver Name" value="<%= newMessage.receiver %>" readonly hidden />
+    <div id="messages">
+            <% if(messages.length> 0 ) { for(i = 0; i < messages.length; i++){ %>
+                    <div class="col-sm-3 mb-4">
+                        <div class="card border-primary" style="min-height: 210px">
+                                <p class="card-text">
+                                    <%= messages[i].content %>
+                                </p>
+                        </div>
+                    </div>
+                    <% }} %>
+    </div>
+
+    <input type="text" id="message" placeholder="Type a message" value="<%= newMessage.content%>"/>
+    <button id="sendBtn" type="submit">Send</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+    socket.on('connect', () => {
+        console.log('Connected to server with socket ID:', socket.id);
+    });        const messageInput = document.getElementById('message');
+        const senderInput = document.getElementById('sender');
+        const receiverInput = document.getElementById('receiver');
+        const sendButton = document.getElementById('sendBtn');
+        const messagesDiv = document.getElementById('messages');
+
+        // Join the receiver's room when they enter their name
+        receiverInput.addEventListener('blur', () => {
+            const receiver = receiverInput.value;
+            if (receiver) {
+                socket.emit('joinRoom', receiver);
+            }
+        });
+
+        // Send new message to the server
+        sendButton.addEventListener('click', () => {
+            console.log('button clicked');
+            const sender = senderInput.value || 'Anonymous';
+            const receiver = receiverInput.value;
+            const content = messageInput.value;
+
+            if (content.trim()) {
+                const data = { sender, receiver, content };
+                socket.emit('newMessage', data);  // Emit the message to the server
+                messageInput.value = '';  // Clear the input field
+            }
+        });
+
+        // Listen for new messages from the server
+        socket.on('chatMessage', (data) => {
+            displayMessage(data);
+        });
+
+        // Function to display messages in the UI
+        function displayMessage(data) {
+            const div = document.createElement('div');
+            div.classList.add('message');
+            div.innerHTML = `<strong>${data.sender} to ${data.receiver}:</strong> ${data.content}`;
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;  // Auto-scroll to bottom
+        }
+    </script>
+</body>
+</html>
